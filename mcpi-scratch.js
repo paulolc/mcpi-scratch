@@ -1,153 +1,93 @@
-(function (ext) {
 
+(function (ext) {
+      
+    //constants
+    var DEFAULT_HOST = "localhost";
+    var DEFAULT_PORT = 4715;
+    var MC_EVENTS_POLL_INTERVAL_IN_MS = 2000;
+
+    //init vars
     var blockHits = false;
+    var host = DEFAULT_HOST;
+    var port = DEFAULT_PORT;
+    var status = { status:2, msg:'Ready' }; // status must be always ready. Otherwise the block with the server address will not be executed.
+    var isConnecteds = false;
+    var logConsole = console;
+
+    ext.changeToServer = function( srvaddr ){
+      var address = srvaddr.split(":");
+      host = address[0];
+      port = ( address[1] ? address[1] : DEFAULT_PORT );
+    };
+    
+    function log(msg){
+      logConsole.log(msg);
+    }
 
     ext.postToChat = function(str) {
-        var cmdUrl = "http://localhost:4715/postToChat/" + encodeURIComponent(str);
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("postToChat success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error postToChat: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
+      execCmd( "postToChat", [str]);
     };
 
     ext.playerPosToChat = function() {
-        var cmdUrl = "http://localhost:4715/playerPosToChat";
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            // dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("playerPosToChat success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error playerPosToChat: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
+      execCmd( "playerPosToChat", []);
     };
 
     ext.setPlayerPos = function(x, y, z) {
-        var cmdUrl = "http://localhost:4715/setPlayerPos/" + x + "/" + y + "/" + z;
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("setPlayerPos success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error setPlayerPos: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
+      execCmd( "setPlayerPos", [ x, y, z ]);
     };
 
     ext.setBlock = function(x, y, z, blockType, blockData, posType) {
-        var cmdUrl = "http://localhost:4715/setBlock/" + x + "/" + y + "/" + z + "/" + blockType + "/" + blockData + "/" + posType;
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("setBlock success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error setBlock: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
+      execCmd( "setBlock", [ x, y, z, blockType, blockData, posType ]);
     };
 
     ext.setBlocks = function(x1, y1, z1, x2, y2, z2, blockType, blockData) {
-        var cmdUrl = "http://localhost:4715/setBlocks/" + x1 + "/" + y1 + "/" + z1 + "/" 
-            + x2 + "/" + y2 + "/" + z2 + "/" + blockType + "/" + blockData;
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("setBlocks success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error setBlocks: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
-    };
+      execCmd( "setBlocks", [ x1, y1, z1, x2, y2, z2, blockType, blockData ]);
+    }
 
     ext.setLine = function(x1, z1, x2, z2, y, blockType, blockData) {
-        var cmdUrl = "http://localhost:4715/setLine/" + x1 + "/" + z1 + "/" 
-            + x2 + "/" + z2 + "/" + y + "/" + blockType + "/" + blockData;
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("setLine success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error setLine: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
-    };
+      execCmd( "setLine", [ x1, z1, x2, z2, y, blockType, blockData ]);
+    }
 
     ext.setCircle = function(x, z, r, y, blockType, blockData) {
-        var cmdUrl = "http://localhost:4715/setCircle/" + x + "/" + z + "/" 
-            + r + "/" + y + "/" + blockType + "/" + blockData;
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("setCircle success");
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error setCircle: ", error);
-            }
-        }); // nb: GET is including the javascript callback. Do I need this for one-way call?
+      execCmd( "setCircle", [ x, z, r, y, blockType, blockData ]);
     };
-
+    
     // get one coord (x, y, or z) for playerPos
     ext.getPlayerPos = function(posCoord, callback) {
-        var cmdUrl = "http://localhost:4715/getPlayerPos/" + posCoord;
+      execCmd( "getPlayerPos", [ posCoord ], callback);
+    };
+
+    ext.getBlock = function(x, y, z, posType, callback) {
+      execCmd( "getBlock", [ x, y, z, posType ], callback);
+    }
+    
+    function execCmd( cmd , params, callback ){
+        var cmdUrl = "http://" + host + ":" + port + "/" + cmd + "/" + params.join("/");
         $.ajax({
             type: "GET",
             url: cmdUrl,
             //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
             success: function(data) {
-                console.log("getPlayerPos success ", data.trim());
-                callback(data.trim());
+                console.log( cmd + " success ", data.trim());
+                if(callback){
+                  callback(data.trim());
+                }
             },
             error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error getPlayerPos: ", error);
-                callback(null);
+                console.log("Error " + cmd + ": ", error);
+                if(callback){
+                  callback(null);
+                }
             }
         }); 
-    };
+    }
 
     // get one coord (x, y, or z) for playerPos
-    ext.getBlock = function(x, y, z, posType, callback) {
-        var cmdUrl = "http://localhost:4715/getBlock/" + x + "/" + y + "/" + z + "/" + posType;
-        $.ajax({
-            type: "GET",
-            url: cmdUrl,
-            //dataType: "jsonp", // hack for the not origin problem - replace with CORS based solution
-            success: function(data) {
-                console.log("getPlayerPos success ", data.trim());
-                callback(data.trim());
-            },
-            error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
-                console.log("Error getPlayerPos: ", error);
-                callback(null);
-            }
-        }); 
-    };
+
+
 
     function checkMC_Events() {
-        var cmdUrl = "http://localhost:4715/pollBlockHit/";
+        var cmdUrl = "http://" + host + ":" + port + "/pollBlockHit/";
         $.ajax({
             type: "GET",
             url: cmdUrl,
@@ -158,13 +98,15 @@
                     blockHits = true;
                 else
                     blockHits = false;
+                isConnected = true;
             },
             error: function(jqxhr, textStatus, error) { // have to change this coz jasonp parse error
                 console.log("Error checkMC_Events: ", error);
-                callback(null);
+                //callback(null);
+                isConnected = false;
             }
         }); 
-    };
+    }
 
     ext.whenBlockHit = function(str) {
         if (!blockHits)
@@ -175,7 +117,16 @@
 
 
     ext._getStatus = function() {
-        return { status:2, msg:'Ready' };
+      if( isConnected ){
+        status =  { status:2, msg:'Ready' };
+      } else {
+        if( status.status === 2 ){
+          status =  { status:0, msg:'Connecting' };
+        } else {
+          status =  { status:2, msg:'Ready' };
+        }
+      }
+      return status;
     };
 
     ext._shutdown = function() {
@@ -184,10 +135,15 @@
           poller = null;
         }
     };
-
-
+    
+    ext.serverIsConnected = function(){
+      return isConnected;
+    };
+    
     var TRANSLATIONS = {
         en: {
+            changeToServer: 'change to server %s',
+            serverIsConnected: 'is server connected?',
             postToChat: 'post to chat %s',
             playerPosToChat: "post Player.pos chat",
             setPlayerPos: "set Player pos to x:%n y:%n z:%n",
@@ -201,6 +157,8 @@
             message:"message"
         },
         pt: {
+            changeToServer: 'muda para o servidor: %s',
+            serverIsConnected: 'o servidor está ligado?',
             postToChat: "escreve no chat %s",
             playerPosToChat: "escreve posição do jogador no chat",
             setPlayerPos: "muda a pos do Jogador para x:%n y:%n z:%n",
@@ -213,7 +171,7 @@
             whenBlockHit: "quando bloco atingido",
             message:"mensagem"
         },
-    }
+    };
 
     function getTranslationForLang( lang ){
         switch (lang){
@@ -227,11 +185,11 @@
         }
     }
 
-    // how which language translation is chosen (increasing priority):
-    //   1 - explicit 'lang' parameter in the url (e.g: http://scratchx.org/?url=https://paulolc.neocities.org/mcpi-scratch/mcpi-scratch.js&lang=pt#scratch)
-    //   2 - browser first preferred language (navigator.languages[0])
-    //   3 - default (english)
-
+   // how which language translation is chosen (increasing priority):
+   //   1 - explicit 'lang' parameter in the url (e.g: http://scratchx.org/?url=https://paulolc.neocities.org/mcpi-scratch/mcpi-scratch.js&lang=pt#scratch)
+   //   2 - browser first preferred language (navigator.languages[0])
+   //   3 - default (english)
+ 
     var urlParams = new URLSearchParams(window.location.search);
     var lang = urlParams.get('lang') || navigator.languages[0];
     var translate = getTranslationForLang(lang);
@@ -239,6 +197,8 @@
     // Block and block menu descriptions
     var descriptor = {
         blocks: [
+            [" ", translate.changeToServer,"changeToServer",host ],
+            ["r", translate.serverIsConnected,"serverIsConnected"],
             ['',  translate.postToChat, "postToChat",  translate.message],
             [" ", translate.playerPosToChat,"playerPosToChat"],
             [" ", translate.setPlayerPos,"setPlayerPos", 0, 0, 0],
@@ -260,6 +220,6 @@
     ScratchExtensions.register('MCPI-Scratch', descriptor, ext);
 
     checkMC_Events();
-    var poller = setInterval(checkMC_Events, 2000);
+    var poller = setInterval(checkMC_Events, MC_EVENTS_POLL_INTERVAL_IN_MS );
 
 })({});

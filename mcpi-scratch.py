@@ -330,6 +330,6 @@ if __name__ == '__main__':
             time.sleep( MCPI_CONNECT_TIMEOUT )
 
     from BaseHTTPServer import HTTPServer
-    server = HTTPServer(('localhost', 4715), GetHandler)
+    server = HTTPServer(('0.0.0.0', 4715), GetHandler)
     log.info('Starting server, use <Ctrl-C> to stop')
     server.serve_forever()
